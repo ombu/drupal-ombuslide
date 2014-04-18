@@ -182,7 +182,7 @@ function theme_ombuslide_default($variables) {
     'speed' => 600,
     'manualSpeed' => 600,
     'fx' => 'scrollHorz',
-    'hideNonActive' => false
+    'hideNonActive' => true
   );
 
   drupal_add_js(array('ombuslide' => array($id_slides => $opts)), 'setting');

@@ -1,14 +1,14 @@
 /*!
-* jQuery Cycle2; build: v20131022
+* jQuery Cycle2; version: 2.1.5 build: 20140415
 * http://jquery.malsup.com/cycle2/
-* Copyright (c) 2013 M. Alsup; Dual licensed: MIT/GPL
+* Copyright (c) 2014 M. Alsup; Dual licensed: MIT/GPL
 */
 
-/*! core engine; version: 20131003 */
+/* Cycle2 core engine */
 ;(function($) {
 "use strict";
 
-var version = '20131003';
+var version = '2.1.5';
 
 $.fn.cycle = function( options ) {
     // fix mistakes with the ready state
@@ -30,7 +30,7 @@ $.fn.cycle = function( options ) {
         if ( container.data('cycle.opts') )
             return; // already initialized
 
-        if ( container.data('cycle-log') === false || 
+        if ( container.data('cycle-log') === false ||
             ( options && options.log === false ) ||
             ( opts && opts.log === false) ) {
             log = $.noop;
@@ -85,7 +85,7 @@ $.fn.cycle.API = {
         var slides = opts.slides;
         opts.slideCount = 0;
         opts.slides = $(); // empty set
-        
+
         // add slides that already exist
         slides = slides.jquery ? slides : opts.container.find( slides );
 
@@ -122,7 +122,11 @@ $.fn.cycle.API = {
         if ( opts.container.css('position') == 'static' )
             opts.container.css('position', 'relative');
 
-        $(opts.slides[opts.currSlide]).css('opacity',1).show();
+        $(opts.slides[opts.currSlide]).css({
+            opacity: 1,
+            display: 'block',
+            visibility: 'visible'
+        });
         opts.API.stackSlides( opts.slides[opts.currSlide], opts.slides[opts.nextSlide], !opts.reverse );
 
         if ( opts.pauseOnHover ) {
@@ -131,7 +135,7 @@ $.fn.cycle.API = {
                 pauseObj = $( opts.pauseOnHover );
 
             pauseObj.hover(
-                function(){ opts.API.pause( true ); }, 
+                function(){ opts.API.pause( true ); },
                 function(){ opts.API.resume( true ); }
             );
         }
@@ -154,7 +158,7 @@ $.fn.cycle.API = {
             alreadyPaused = opts.hoverPaused || opts.paused;
 
         if ( hover )
-            opts.hoverPaused = true; 
+            opts.hoverPaused = true;
         else
             opts.paused = true;
 
@@ -165,7 +169,7 @@ $.fn.cycle.API = {
             if ( slideOpts.timeout ) {
                 clearTimeout( opts.timeoutId );
                 opts.timeoutId = 0;
-                
+
                 // determine how much time is left for the current slide
                 opts._remainingTimeout -= ( $.now() - opts._lastQueue );
                 if ( opts._remainingTimeout < 0 || isNaN(opts._remainingTimeout) )
@@ -180,11 +184,11 @@ $.fn.cycle.API = {
             remaining;
 
         if ( hover )
-            opts.hoverPaused = false; 
+            opts.hoverPaused = false;
         else
             opts.paused = false;
 
-    
+
         if ( ! alreadyResumed ) {
             opts.container.removeClass('cycle-paused');
             // #gh-230; if an animation is in progress then don't queue a new transition; it will
@@ -281,10 +285,17 @@ $.fn.cycle.API = {
     calcTx: function( slideOpts, manual ) {
         var opts = slideOpts;
         var tx;
-        if ( manual && opts.manualFx )
+
+        if ( opts._tempFx )
+            tx = $.fn.cycle.transitions[opts._tempFx];
+        else if ( manual && opts.manualFx )
             tx = $.fn.cycle.transitions[opts.manualFx];
+
         if ( !tx )
             tx = $.fn.cycle.transitions[opts.fx];
+
+        opts._tempFx = null;
+        this.opts()._tempFx = null;
 
         if (!tx) {
             tx = $.fn.cycle.transitions.fade;
@@ -327,9 +338,9 @@ $.fn.cycle.API = {
 
         // ensure that:
         //      1. advancing to a different slide
-        //      2. this is either a manual event (prev/next, pager, cmd) or 
+        //      2. this is either a manual event (prev/next, pager, cmd) or
         //              a timer event and slideshow is not paused
-        if ( opts.nextSlide != opts.currSlide && 
+        if ( opts.nextSlide != opts.currSlide &&
             (manual || (!opts.paused && !opts.hoverPaused && opts.timeout) )) { // #62
 
             opts.API.trigger('cycle-before', [ slideOpts, curr, next, fwd ]);
@@ -401,14 +412,24 @@ $.fn.cycle.API = {
             opts.nextSlide = opts.currSlide;
             return;
         }
+        if ( opts.continueAuto !== undefined ) {
+            if ( opts.continueAuto === false ||
+                ($.isFunction(opts.continueAuto) && opts.continueAuto() === false )) {
+                opts.API.log('terminating automatic transitions');
+                opts.timeout = 0;
+                if ( opts.timeoutId )
+                    clearTimeout(opts.timeoutId);
+                return;
+            }
+        }
         if ( timeout ) {
             opts._lastQueue = $.now();
             if ( specificTimeout === undefined )
                 opts._remainingTimeout = slideOpts.timeout;
 
             if ( !opts.paused && ! opts.hoverPaused ) {
-                opts.timeoutId = setTimeout(function() { 
-                    opts.API.prepareTx( false, !opts.reverse ); 
+                opts.timeoutId = setTimeout(function() {
+                    opts.API.prepareTx( false, !opts.reverse );
                 }, timeout );
             }
         }
@@ -431,7 +452,7 @@ $.fn.cycle.API = {
         clearTimeout(opts.timeoutId);
         opts.timeoutId = 0;
         opts.nextSlide = opts.currSlide + val;
-        
+
         if (opts.nextSlide < 0)
             opts.nextSlide = opts.slides.length - 1;
         else if (opts.nextSlide >= opts.slides.length)
@@ -480,7 +501,7 @@ $.fn.cycle.API = {
         var slideOpts = $(slide).data('cycle.opts');
         return $.extend( {}, opts, slideOpts );
     },
-    
+
     initSlide: function( slideOpts, slide, suggestedZindex ) {
         var opts = this.opts();
         slide.css( slideOpts.slideCss || {} );
@@ -496,7 +517,7 @@ $.fn.cycle.API = {
         slide.addClass( opts.slideClass );
     },
 
-    updateView: function( isAfter, isDuring ) {
+    updateView: function( isAfter, isDuring, forceEvent ) {
         var opts = this.opts();
         if ( !opts._initialized )
             return;
@@ -515,7 +536,7 @@ $.fn.cycle.API = {
         }
 
         if ( isAfter && opts.hideNonActive )
-            opts.slides.filter( ':not(.' + opts.slideActiveClass + ')' ).hide();
+            opts.slides.filter( ':not(.' + opts.slideActiveClass + ')' ).css('visibility', 'hidden');
 
         if ( opts.updateView === 0 ) {
             setTimeout(function() {
@@ -525,7 +546,7 @@ $.fn.cycle.API = {
 
         if ( opts.updateView !== 0 )
             opts.API.trigger('cycle-update-view', [ opts, slideOpts, currSlide, isAfter ]);
-        
+
         if ( isAfter )
             opts.API.trigger('cycle-update-view-after', [ opts, slideOpts, currSlide ]);
     },
@@ -539,7 +560,7 @@ $.fn.cycle.API = {
         }
         if (selector.jquery)
             return selector;
-        
+
         return $(selector);
     },
 
@@ -602,14 +623,14 @@ $.fn.cycle.transitions = {
     none: {
         before: function( opts, curr, next, fwd ) {
             opts.API.stackSlides( next, curr, fwd );
-            opts.cssBefore = { opacity: 1, display: 'block' };
+            opts.cssBefore = { opacity: 1, visibility: 'visible', display: 'block' };
         }
     },
     fade: {
         before: function( opts, curr, next, fwd ) {
             var css = opts.API.getSlideOpts( opts.nextSlide ).slideCss || {};
             opts.API.stackSlides( curr, next, fwd );
-            opts.cssBefore = $.extend(css, { opacity: 0, display: 'block' });
+            opts.cssBefore = $.extend(css, { opacity: 0, visibility: 'visible', display: 'block' });
             opts.animIn = { opacity: 1 };
             opts.animOut = { opacity: 0 };
         }
@@ -618,7 +639,7 @@ $.fn.cycle.transitions = {
         before: function( opts , curr, next, fwd ) {
             var css = opts.API.getSlideOpts( opts.nextSlide ).slideCss || {};
             opts.API.stackSlides( curr, next, fwd );
-            opts.cssBefore = $.extend(css, { opacity: 1, display: 'block' });
+            opts.cssBefore = $.extend(css, { opacity: 1, visibility: 'visible', display: 'block' });
             opts.animOut = { opacity: 0 };
         }
     },
@@ -626,7 +647,7 @@ $.fn.cycle.transitions = {
         before: function( opts, curr, next, fwd ) {
             opts.API.stackSlides( curr, next, fwd );
             var w = opts.container.css('overflow','hidden').width();
-            opts.cssBefore = { left: fwd ? w : - w, top: 0, opacity: 1, display: 'block' };
+            opts.cssBefore = { left: fwd ? w : - w, top: 0, opacity: 1, visibility: 'visible', display: 'block' };
             opts.cssAfter = { zIndex: opts._maxZ - 2, left: 0 };
             opts.animIn = { left: 0 };
             opts.animOut = { left: fwd ? -w : w };
@@ -667,13 +688,15 @@ $(document).ready(function() {
 
 })(jQuery);
 
-/*! Cycle2 autoheight plugin; Copyright (c) M.Alsup, 2012; version: 20130304 */
+/*! Cycle2 autoheight plugin; Copyright (c) M.Alsup, 2012; version: 20130913 */
 (function($) {
 "use strict";
 
 $.extend($.fn.cycle.defaults, {
-    autoHeight: 0 // setting this option to false disables autoHeight logic
-});    
+    autoHeight: 0, // setting this option to false disables autoHeight logic
+    autoHeightSpeed: 250,
+    autoHeightEasing: null
+});
 
 $(document).on( 'cycle-initialized', function( e, opts ) {
     var autoHeight = opts.autoHeight;
@@ -691,7 +714,7 @@ $(document).on( 'cycle-initialized', function( e, opts ) {
     if ( autoHeight == 'container' ) {
         opts.container.on( 'cycle-before', onBefore );
     }
-    else if ( t === 'string' && /\d+\:\d+/.test( autoHeight ) ) { 
+    else if ( t === 'string' && /\d+\:\d+/.test( autoHeight ) ) {
         // use ratio
         ratio = autoHeight.match(/(\d+)\:(\d+)/);
         ratio = ratio[1] / ratio[2];
@@ -725,7 +748,7 @@ function initAutoHeight( e, opts ) {
         height = $( opts.slides[ opts.currSlide ] ).outerHeight();
         opts.container.height( height );
     }
-    else if ( opts._autoHeightRatio ) { 
+    else if ( opts._autoHeightRatio ) {
         opts.container.height( opts.container.width() / opts._autoHeightRatio );
     }
     else if ( autoHeight === 'calc' || ( $.type( autoHeight ) == 'number' && autoHeight >= 0 ) ) {
@@ -733,7 +756,7 @@ function initAutoHeight( e, opts ) {
             sentinelIndex = calcSentinelIndex( e, opts );
         else if ( autoHeight >= opts.slides.length )
             sentinelIndex = 0;
-        else 
+        else
             sentinelIndex = autoHeight;
 
         // only recreate sentinel if index is different
@@ -746,7 +769,7 @@ function initAutoHeight( e, opts ) {
 
         // clone existing slide as sentinel
         clone = $( opts.slides[ sentinelIndex ].cloneNode(true) );
-        
+
         // #50; remove special attributes from cloned content
         clone.removeAttr( 'id name rel' ).find( '[id],[name],[rel]' ).removeAttr( 'id name rel' );
 
@@ -759,7 +782,7 @@ function initAutoHeight( e, opts ) {
 
         opts._sentinel = clone;
     }
-}    
+}
 
 function calcSentinelIndex( e, opts ) {
     var index = 0, max = -1;
@@ -777,8 +800,7 @@ function calcSentinelIndex( e, opts ) {
 
 function onBefore( e, opts, outgoing, incoming, forward ) {
     var h = $(incoming).outerHeight();
-    var duration = opts.sync ? opts.speed / 2 : opts.speed;
-    opts.container.animate( { height: h }, duration );
+    opts.container.animate( { height: h }, opts.autoHeightSpeed, opts.autoHeightEasing );
 }
 
 function onDestroy( e, opts ) {
@@ -808,14 +830,14 @@ $.extend($.fn.cycle.defaults, {
     overlay:          '> .cycle-overlay',
     overlayTemplate:  '<div>{{title}}</div><div>{{desc}}</div>',
     captionModule:    'caption'
-});    
+});
 
 $(document).on( 'cycle-update-view', function( e, opts, slideOpts, currSlide ) {
     if ( opts.captionModule !== 'caption' )
         return;
     var el;
     $.each(['caption','overlay'], function() {
-        var name = this; 
+        var name = this;
         var template = slideOpts[name+'Template'];
         var el = opts.API.getComponent( name );
         if( el.length && template ) {
@@ -841,7 +863,7 @@ $(document).on( 'cycle-destroyed', function( e, opts ) {
 
 })(jQuery);
 
-/*! command plugin for Cycle2;  version: 20130707 */
+/*! command plugin for Cycle2;  version: 20140415 */
 (function($) {
 "use strict";
 
@@ -892,7 +914,7 @@ $.extend( c2.API, {
         var opts = this.opts();
         if ( opts.busy && ! opts.manualTrump )
             return;
-        
+
         var count = opts.reverse ? -1 : 1;
         if ( opts.allowWrap === false && ( opts.currSlide + count ) >= opts.slideCount )
             return;
@@ -937,7 +959,7 @@ $.extend( c2.API, {
         });
     },
 
-    jump: function( index ) {
+    jump: function( index, fx ) {
         // go to the requested slide
         var fwd;
         var opts = this.opts();
@@ -957,6 +979,7 @@ $.extend( c2.API, {
         opts.timeoutId = 0;
         opts.API.log('goto: ', num, ' (zero-index)');
         fwd = opts.currSlide < opts.nextSlide;
+        opts._tempFx = fx;
         opts.API.prepareTx( true, fwd );
     },
 
@@ -1058,7 +1081,7 @@ function onHashChange( opts, setStartingSlide ) {
         opts._hashFence = false;
         return;
     }
-    
+
     hash = window.location.hash.substring(1);
 
     opts.slides.each(function(i) {
@@ -1078,7 +1101,7 @@ function onHashChange( opts, setStartingSlide ) {
 
 })(jQuery);
 
-/*! loader plugin for Cycle2;  version: 20131020 */
+/*! loader plugin for Cycle2;  version: 20131121 */
 (function($) {
 "use strict";
 
@@ -1111,9 +1134,7 @@ $(document).on( 'cycle-bootstrap', function( e, opts ) {
         if ( ! slideCount )
             return;
 
-        opts.eventualSlideCount = opts.slideCount + slideCount;
-
-        slides.hide().appendTo('body').each(function(i) { // appendTo fixes #56
+        slides.css('visibility','hidden').appendTo('body').each(function(i) { // appendTo fixes #56
             var count = 0;
             var slide = $(this);
             var images = slide.is('img') ? slide : slide.find('img');
@@ -1135,7 +1156,7 @@ $(document).on( 'cycle-bootstrap', function( e, opts ) {
                 else {
                     $(this).load(function() {
                         imageLoaded();
-                    }).error(function() {
+                    }).on("error", function() {
                         if ( --count === 0 ) {
                             // ignore this slide
                             opts.API.log('slide skipped; img not loaded:', this.src);
@@ -1157,7 +1178,7 @@ $(document).on( 'cycle-bootstrap', function( e, opts ) {
 
         if ( slideCount )
             opts.container.addClass('cycle-loading');
-        
+
 
         function addSlide( slide ) {
             var curr;
@@ -1186,7 +1207,7 @@ $(document).on( 'cycle-bootstrap', function( e, opts ) {
 
 })(jQuery);
 
-/*! pager plugin for Cycle2;  version: 20130525 */
+/*! pager plugin for Cycle2;  version: 20140415 */
 (function($) {
 "use strict";
 
@@ -1194,8 +1215,9 @@ $.extend($.fn.cycle.defaults, {
     pager:            '> .cycle-pager',
     pagerActiveClass: 'cycle-pager-active',
     pagerEvent:       'click.cycle',
+    pagerEventBubble: undefined,
     pagerTemplate:    '<span>&bull;</span>'
-});    
+});
 
 $(document).on( 'cycle-bootstrap', function( e, opts, API ) {
     // add method to API
@@ -1254,7 +1276,8 @@ function buildPagerLink( opts, slideOpts, slide ) {
             pagerLink = pager.children().eq( opts.slideCount - 1 );
         }
         pagerLink.on( opts.pagerEvent, function(e) {
-            e.preventDefault();
+            if ( ! opts.pagerEventBubble )
+                e.preventDefault();
             opts.API.page( pager, e.currentTarget);
         });
     });
@@ -1273,14 +1296,14 @@ function page( pager, target ) {
         return; // no op, clicked pager for the currently displayed slide
     }
     opts.nextSlide = nextSlide;
+    opts._tempFx = opts.pagerFx;
     opts.API.prepareTx( true, fwd );
     opts.API.trigger('cycle-pager-activated', [opts, pager, target ]);
 }
 
 })(jQuery);
 
-
-/*! prevnext plugin for Cycle2;  version: 20130709 */
+/*! prevnext plugin for Cycle2;  version: 20140408 */
 (function($) {
 "use strict";
 
@@ -1308,9 +1331,11 @@ $(document).on( 'cycle-initialized', function( e, opts ) {
         var nextEvent = opts.swipeVert ? 'swipeUp.cycle' : 'swipeLeft.cycle swipeleft.cycle';
         var prevEvent = opts.swipeVert ? 'swipeDown.cycle' : 'swipeRight.cycle swiperight.cycle';
         opts.container.on( nextEvent, function(e) {
+            opts._tempFx = opts.swipeFx;
             opts.API.next();
         });
         opts.container.on( prevEvent, function() {
+            opts._tempFx = opts.swipeFx;
             opts.API.prev();
         });
     }
@@ -1389,7 +1414,7 @@ $(document).on( 'cycle-pre-initialize', function( e, opts ) {
         else {
             // plain text, split on delimeter
             slides = slides.split( new RegExp( scriptEl.data('cycle-split') || '\n') );
-            
+
             // #95; look for empty slide
             if ( ! slides[ slides.length - 1 ] )
                 slides.pop();
@@ -1449,11 +1474,11 @@ $(document).on( 'cycle-pre-initialize', function( e, opts ) {
                 opts.API.add( slide );
             }
             else {
-                nextFn.apply( opts.API );    
+                nextFn.apply( opts.API );
             }
         };
     }
-    
+
     if ( prevFn ) {
         API.prev = function() {
             var opts = this.opts();
@@ -1515,6 +1540,6 @@ $.extend($.fn.cycle.API, {
             return str;
         });
     }
-});    
+});
 
 })(jQuery);

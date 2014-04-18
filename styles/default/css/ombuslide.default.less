@@ -1,5 +1,3 @@
-@import '../../../ombuslide.mixins.less';
-
 .entity.bean-ombuslide {
   position: relative;
 }
@@ -53,21 +51,6 @@
 
       &.first {
         display: block;
-      }
-
-      &.cycle-slide-active {
-        .group_primary, .group_secondary {
-          > * {
-            .opacity(1);
-          }
-        }
-      }
-    }
-
-    .group_primary, .group_secondary {
-      > * {
-        .opacity(0);
-        .transition(all 0.5s ease);
       }
     }
 
