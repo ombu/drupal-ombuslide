@@ -30,7 +30,14 @@
       // Pause the slideshow if the user clicks or hovers anywhere inside
       // its container element.
       this.$slideshow.on('click mouseover', $.proxy(function(e) {
-        e.stopPropagation();
+
+        // Only prevent event propagation for clicks.  Mouseover events should
+        // be allowed to propagate so that other Drupal behaviors — such as the
+        // appearance of the admin gear menu icon — will remain in effect.
+        if (e.type == 'click') {
+          e.stopPropagation();
+        }
+
         this.$slides.cycle('pause');
       }, this));
 
