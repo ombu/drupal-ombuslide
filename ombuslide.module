@@ -142,7 +142,7 @@ function theme_ombuslide_default($variables) {
     $id = drupal_html_id('slide');
 
     // Add a pager link for this slide.
-    $pager .= '<li><a href="#' . $id . '"><span>' . ++$num . '</span></a></li>';
+    $pager .= '<li><a href="#' . $id . '"><span><em>' . ++$num . '</em></span></a></li>';
 
     // Set the ID, render the slide, and push it onto our list item array.
     $item['data']['#attributes']['id'] = $id;
