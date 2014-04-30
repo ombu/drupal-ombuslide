@@ -98,7 +98,9 @@
   color: #999;
 }
 .ombuslide-slideshow .pager > li a:hover,
-.ombuslide-slideshow .prevnext > li a:hover {
+.ombuslide-slideshow .prevnext > li a:hover,
+.ombuslide-slideshow .pager > li a:focus,
+.ombuslide-slideshow .prevnext > li a:focus {
   text-decoration: none;
   color: white;
 }
