@@ -2,30 +2,28 @@
   Drupal.behaviors.ombuslide = {
     attach: function(context, settings) {
 
-      // Process each ombuslide slideshow on page.
-      for (var slideshow in settings.ombuslide) {
+      $('.ombuslide-slideshow:not(.ombuslide-processed)', context)
+        .each(function(i, el) {
+          var $slideshow = $(el);
+          if ($slideshow.find('> .slides > li').length > 1) {
+            var settings = $.parseJSON($slideshow.attr('data-ombuslide-settings'));
+            new Drupal.slideshow($slideshow, settings);
+          }
+        })
+        .addClass('ombuslide-processed');
 
-        // Instantiate a slideshow.
-        new Drupal.slideshow(slideshow, context, Drupal.settings.ombuslide[slideshow]);
-      }
     }
   }
 
-  Drupal.slideshow = function(slideshow, context, opts) {
+  Drupal.slideshow = function($slideshow, settings) {
+      this.settings = settings;
 
-    // Get a handle to the slideshow.
-    this.$slides = $('#' + slideshow, context);
+      this.$slideshow = $slideshow;
 
-    // Only process slideshows that have one or more slides.
-    if ($(' > li', this.$slides).length > 1) {
-
-      // Get a handle to the slideshow container and remember the slideshow
-      // instance options.
-      this.$slideshow = this.$slides.parent();
-      this.opts = opts;
+      this.$slides = $slideshow.find('.slides');
 
       // Instantiate jQuery Cycle 2 plugin.
-      this.$slides.cycle(opts);
+      this.$slides.cycle(settings);
 
       // Pause the slideshow if the user clicks or hovers anywhere inside
       // its container element.
@@ -47,7 +45,6 @@
       }, this));
 
       resizeVideo(this.$slideshow, this.$slideshow.find('.file-video iframe'));
-    }
   }
 
   function resizeVideo($container, $video) {
