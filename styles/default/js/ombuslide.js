@@ -45,7 +45,27 @@
       }, this));
 
       resizeVideo(this.$slideshow, this.$slideshow.find('.file-video iframe'));
+
+      this.$slides.on('cycle-update-view', $.proxy(function(event, optionHash, slideOptionsHash, currentSlideEl) {
+        var $currentSlideEl = $(currentSlideEl);
+        this.lazyLoadSlideImages($currentSlideEl.next('li'));
+        this.lazyLoadSlideImages($currentSlideEl.prev('li'));
+      }, this));
+
+      this.$slides.on('cycle-before', $.proxy(function(event, optionHash, outgoingSlideEl, incomingSlideEl, forwardFlag) {
+        this.lazyLoadSlideImages($(incomingSlideEl));
+      }, this));
+
   }
+
+  Drupal.slideshow.prototype.lazyLoadSlideImages = function($slide) {
+    $slide
+      .find('.lazy:not(.lazy-loaded)')
+      .each(function(i, el) {
+        $(el).replaceWith('<img class="lazy lazy-loaded" src="' + $(el).attr('data-src') + '" />');
+      });
+  };
+
 
   function resizeVideo($container, $video) {
     var aspectRatio = $video.attr('height') / $video.attr('width');
