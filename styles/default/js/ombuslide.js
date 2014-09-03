@@ -12,7 +12,11 @@
               return '<li class="' + index + '"><a href="#">' + (index + 1) +
               '</a></li>';
           }
-          slides.cycle(opts)
+
+          // Wait to initialize cycle library until DOM content has loaded.
+          setTimeout(function() {
+            slides.cycle(opts);
+          }, 0);
         }
       }
     }
