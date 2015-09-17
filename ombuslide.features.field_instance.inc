@@ -50,15 +50,17 @@ function ombuslide_field_default_field_instances() {
   // Exported field_instance: 'field_collection_item-field_slide-field_image'
   $field_instances['field_collection_item-field_slide-field_image'] = array(
     'bundle' => 'field_slide',
-    'default_value' => NULL,
     'deleted' => 0,
     'description' => '',
     'display' => array(
       'default' => array(
         'label' => 'hidden',
-        'module' => 'ombumedia',
-        'settings' => array(),
-        'type' => 'ombumedia_render',
+        'module' => 'image',
+        'settings' => array(
+          'image_link' => '',
+          'image_style' => '',
+        ),
+        'type' => 'image',
         'weight' => 0,
       ),
     ),
